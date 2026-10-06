@@ -20,6 +20,7 @@ import ProductDetails from "./productdetails";
 import PaymentCallback from "./PaymentCallback";
 import Receipt from "./Receipt";
 import { ModalProvider } from "./ModalContext";
+import OrderPreview from "./OrderPreview";
 function App() {
 	const user = JSON.parse(localStorage.getItem("user"));
   return (
@@ -45,6 +46,7 @@ function App() {
 	  <Route path="/admin-orders" element={<AdminOrders />} />
 	  <Route path="payment-callback" element={<PaymentCallback />}/>
 	  <Route path="/receipt/:transaction_id" element={<Receipt />}/>
+	  <Route path="/order-preview" element={<OrderPreview />}/>
     </Route>
   </Routes>
 </div>

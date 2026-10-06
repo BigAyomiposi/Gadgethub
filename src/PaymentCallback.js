@@ -2,143 +2,170 @@ import React, { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Footer from "./Footer";
-
+import { useModal } from "./ModalContext";
+import "./App.css";
 
 export default function PaymentCallback() {
+  const location = useLocation();
+  const { showModal, showConfirm } = useModal();
+  const navigate = useNavigate();
+  const hasProcessed = useRef(false);
 
-    const location = useLocation();
-    const navigate = useNavigate();
-	const hasProcessed = useRef(false);
-
-    useEffect(() => {
-
+  useEffect(() => {
     if (hasProcessed.current) {
-        return;
+      return;
     }
 
     hasProcessed.current = true;
 
     const completePayment = async () => {
+      const params = new URLSearchParams(location.search);
 
-        const params = new URLSearchParams(location.search);
+      const transaction_id = params.get("transaction_id");
 
-        const transaction_id =
-            params.get("transaction_id");
+      console.log("Transaction ID:", transaction_id);
 
-        console.log("Transaction ID:", transaction_id);
+      if (!transaction_id) {
+        showModal("Transaction ID not found.");
+        navigate("/cart");
+        return;
+      }
 
-        if (!transaction_id) {
+      try {
+        const pendingCart =
+          JSON.parse(
+            localStorage.getItem("pendingCart")
+          ) || [];
 
-            alert("Transaction ID not found.");
-            navigate("/cart");
+        const pendingOrder =
+          JSON.parse(
+            localStorage.getItem("pendingOrder")
+          );
 
-            return;
+        if (
+          pendingCart.length === 0 ||
+          !pendingOrder
+        ) {
+          showModal("Pending order information not found.");
+          navigate("/cart");
+          return;
         }
 
-        try {
+        const res = await axios.post(
+          "http://localhost:1000/complete-payment",
+          {
+            transaction_id,
+            name: pendingOrder.name,
+            email: pendingOrder.email,
+            phone: pendingOrder.phone,
+            deliveryAddy: pendingOrder.deliveryAddy,
+            items: pendingCart,
+            totalPrice: pendingOrder.totalPrice
+          }
+        );
 
-            const pendingCart =
-                JSON.parse(
-                    localStorage.getItem("pendingCart")
-                ) || [];
+        console.log(
+          "COMPLETE PAYMENT:",
+          res.data
+        );
 
-            const pendingOrder =
-                JSON.parse(
-                    localStorage.getItem("pendingOrder")
-                );
+        if (res.data.success) {
+          const receiptData = {
+            transaction_id: transaction_id,
+            name: pendingOrder.name,
+            email: pendingOrder.email,
+            phone: pendingOrder.phone,
+            deliveryAddy: pendingOrder.deliveryAddy,
+            items: pendingCart,
+            totalPrice: pendingOrder.totalPrice,
+            paymentStatus: "PAID"
+          };
 
-            if (
-                pendingCart.length === 0 ||
-                !pendingOrder
-            ) {
 
-                alert("Pending order information not found.");
-                navigate("/cart");
+          const user = JSON.parse(
+            localStorage.getItem("user") || "null"
+          );
 
-                return;
-            }
+          if (user?.email) {
+            const cartKey = `cart_${user.email}`;
 
-            const res = await axios.post(
-    "http://localhost:1000/complete-payment",
-    {
-        transaction_id,
-        name: pendingOrder.name,
-        email: pendingOrder.email,
-        phone: pendingOrder.phone,
-        deliveryAddy: pendingOrder.deliveryAddy,
-        items: pendingCart,
-        totalPrice: pendingOrder.totalPrice
-    }
-);
             console.log(
-                "COMPLETE PAYMENT:",
-                res.data
+              "Clearing cart:",
+              cartKey
             );
 
-            if (res.data.success) {
+            localStorage.removeItem(cartKey);
+          }
 
-    const receiptData = {
-        transaction_id: transaction_id,
-        name: pendingOrder.name,
-        email: pendingOrder.email,
-        phone: pendingOrder.phone,
-        deliveryAddy: pendingOrder.deliveryAddy,
-        items: pendingCart,
-        totalPrice: pendingOrder.totalPrice,
-        paymentStatus: "PAID"
-    };
+          localStorage.removeItem("checkoutData");
+          localStorage.removeItem("pendingCart");
+          localStorage.removeItem("pendingOrder");
 
-    localStorage.removeItem("cart");
-    localStorage.removeItem("pendingCart");
-    localStorage.removeItem("pendingOrder");
 
-    window.dispatchEvent(
-        new Event("cartUpdated")
-    );
+          window.dispatchEvent(
+            new Event("cartUpdated")
+          );
 
-    navigate("/order-success", {
-    state: {
-        transaction_id: transaction_id
-    }
-});
+          localStorage.setItem(
+            "receipt",
+            JSON.stringify(receiptData)
+          );
 
-}
+          
 
-             else {
-
-                alert(res.data.message);
-                navigate("/cart");
-
+          navigate("/order-success", {
+            state: {
+              transaction_id: transaction_id
             }
+          });
+        } else {
+          showModal(
+            res.data.message ||
+            "Payment could not be completed."
+          );
 
-        } catch (error) {
-
-            console.log(error);
-
-            alert("Unable to complete your order.");
-            navigate("/cart");
-
+          navigate("/cart");
         }
 
+      } catch (error) {
+        console.log(
+          "PAYMENT COMPLETION ERROR:",
+          error
+        );
+
+        console.log(
+          "ERROR RESPONSE:",
+          error.response?.data
+        );
+
+       showModal(
+          error.response?.data?.message ||
+          "Unable to complete your order."
+        );
+
+        navigate("/cart");
+      }
     };
 
     completePayment();
 
-}, [location, navigate]);
+  }, [location, navigate]);
 
-    return (
-<>
-        <div className="payment-callback">
+  
+return (
+  <div className="payment-page">
+    <div className="payment-callback">
+      <h2>Processing Payment...</h2>
 
-            <h2>Processing Payment...</h2>
+      <p>
+        Please wait while we confirm your payment.
+      </p>
+    </div>
 
-            <p>
-                Please wait while we confirm your payment.
-            </p>
-        </div>
-<Footer/>
-		
-</>
-    );
+    <Footer />
+  </div>
+);
+
 
 }
+

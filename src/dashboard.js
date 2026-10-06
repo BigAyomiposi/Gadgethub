@@ -9,8 +9,10 @@ export default function Dashboard() {
 
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user"));
-
+  const user = JSON.parse(
+  localStorage.getItem("user") || "null"
+);
+const [passport, setPassport] = useState(null);
  const [orders, setOrders] = useState([]);
 const [groupedOrders, setGroupedOrders] = useState([]);
   const [activePage, setActivePage] = useState("dashboard");
@@ -68,61 +70,76 @@ console.log("Email:", user?.email);
 
   }, []);
 const saveProfile = async () => {
+  try {
+    const formData = new FormData();
 
-    try {
+    formData.append("fullname", editData.fullname);
+    formData.append("email", editData.email);
+    formData.append("phone", editData.phone);
+    formData.append("oldEmail", user.email);
 
-        const res = await axios.put(
-            "http://localhost:1000/update-profile",
-            {
-                fullname: editData.fullname,
-                email: editData.email,
-                phone: editData.phone,
-                oldEmail: user.email
-            }
-        );
-
-        if (res.data.success) {
-
-            const updatedUser = {
-                ...user,
-                fullname: editData.fullname,
-                email: editData.email,
-                phone: editData.phone
-            };
-
-            localStorage.setItem(
-                "user",
-                JSON.stringify(updatedUser)
-            );
-
-            showModal(
-                "Success",
-                "Profile updated successfully.",
-                () => {
-                    setActivePage("profile");
-                }
-            );
-
-        } else {
-
-            showModal(
-                "Error",
-                res.data.message
-            );
-
-        }
-
-    } catch (err) {
-
-        console.log(err);
-
-        showModal(
-            "Error",
-            "Unable to update profile. Please try again."
-        );
-
+    if (passport) {
+      formData.append("passport", passport);
     }
 
+    const res = await axios.put(
+      "http://localhost:1000/update-profile",
+      formData
+    );
+
+    console.log("UPDATE PROFILE RESPONSE:", res.data);
+
+    if (res.data.success) {
+
+      const updatedUser = {
+        ...user,
+        fullname: editData.fullname,
+        email: editData.email,
+        phone: editData.phone,
+        passport:
+          res.data.passport ??
+          user?.passport ??
+          null
+      };
+
+      console.log("UPDATED USER:", updatedUser);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(updatedUser)
+      );
+
+      showModal(
+        "Success",
+        "Profile updated successfully.",
+        () => {
+          setActivePage("profile");
+        }
+      );
+
+    } else {
+
+      showModal(
+        "Error",
+        res.data.message || "Profile update failed"
+      );
+    }
+
+  } catch (err) {
+
+    console.log("UPDATE ERROR:", err);
+    console.log(
+      "UPDATE RESPONSE:",
+      err.response?.data
+    );
+
+    showModal(
+      "Error",
+      err.response?.data?.message ||
+      err.message ||
+      "Unable to update profile."
+    );
+  }
 };
   const logout = () => {
     localStorage.removeItem("user");
@@ -185,21 +202,98 @@ const saveProfile = async () => {
           </>
         )}
 
-        {activePage === "profile" && (
+  {activePage === "profile" && (
 
-          <div className="profile">
+  <div className="my-profile-box">
 
-            <h2>My Profile</h2>
+    <h2>My Profile</h2>
 
-            <p><strong>Name:</strong> {user?.fullname}</p>
+    <div className="my-profile-layout">
 
-            <p><strong>Email:</strong> {user?.email}</p>
+      {/* PASSPORT SECTION */}
+      <div className="my-profile-passport">
 
-            <p><strong>Phone:</strong> {user?.phone}</p>
+        <div className="my-profile-image-box">
+
+          {user?.passport ? (
+            <img
+              src={`http://localhost:1000/${user.passport}`}
+              alt="Passport"
+              className="my-profile-image"
+            />
+          ) : (
+            <div className="my-profile-no-passport">
+              No passport uploaded
+            </div>
+          )}
+
+        </div>
+
+        <button
+          className="my-profile-passport-btn"
+          onClick={() => setActivePage("editprofile")}
+        >
+          {user?.passport
+            ? "Change Passport"
+            : "Add Passport"}
+        </button>
+
+      </div>
+
+
+      {/* USER INFORMATION */}
+      <div className="my-profile-info">
+
+        <div className="my-profile-details">
+
+          <div className="my-profile-row">
+
+            <span className="my-profile-label">
+              Name:
+            </span>
+
+            <span>
+              {user?.fullname}
+            </span>
 
           </div>
 
-        )}
+
+          <div className="my-profile-row">
+
+            <span className="my-profile-label">
+              Email:
+            </span>
+
+            <span>
+              {user?.email}
+            </span>
+
+          </div>
+
+
+          <div className="my-profile-row">
+
+            <span className="my-profile-label">
+              Phone:
+            </span>
+
+            <span>
+              {user?.phone}
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
+		
 {activePage === "editprofile" && (
 
   <div className="profile">
@@ -241,6 +335,13 @@ const saveProfile = async () => {
             phone:e.target.value
         })
     }
+/>
+<br /><br />
+<input
+  type="file"
+  className="file-input"
+  accept="image/jpeg,image/png,image/jpg"
+  onChange={(e) => setPassport(e.target.files[0])}
 />
 
     <br /><br />

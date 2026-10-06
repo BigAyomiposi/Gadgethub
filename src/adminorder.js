@@ -18,10 +18,7 @@ export default function AdminOrders() {
     const navigate = useNavigate();
 
 
-    // ==============================
-    // LOAD ORDERS
-    // ==============================
-
+   
     const loadOrders = () => {
 
         axios

@@ -168,7 +168,7 @@ const proceedToCheckout = () => {
 
                 <h3>{item.name}</h3>
 
-                <p>₦{item.price.toLocaleString()}</p>
+                <p>Unit Price: ₦{item.price.toLocaleString()}</p>
 				<p className="stock-info">
     Available Stock: {item.quantityAvailable}
 </p>
@@ -186,11 +186,11 @@ const proceedToCheckout = () => {
                   </button>
 
                 </div>
-
+                <div className="Totalprice">
                 <h4>
                   ₦{(item.price * item.quantity).toLocaleString()}
                 </h4>
-
+                  </div>
                 <button
                   className="remove-btn"
                   onClick={() => removeItem(item.id)}

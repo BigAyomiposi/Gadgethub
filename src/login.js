@@ -21,51 +21,64 @@ export default function Login() {
     });
   };
 
-  const signin = async (e) => {
+const signin = async (e) => {
+  e.preventDefault();
 
-    e.preventDefault();
+  try {
+    const res = await axios.post(
+      "http://localhost:1000/login",
+      login
+    );
 
-    try {
+    console.log("LOGIN RESPONSE:", res.data);
+    console.log("LOGIN USER:", res.data.user);
+    console.log("LOGIN PASSPORT:", res.data.user?.passport);
 
-      const res = await axios.post("http://localhost:1000/login", login);
-if (res.data.success) {
+    if (res.data.success) {
+      const loggedInUser = {
+        id: res.data.user.id,
+        fullname: res.data.user.fullname,
+        email: res.data.user.email,
+        phone: res.data.user.phone,
+        isAdmin: Number(res.data.user.isAdmin),
+        passport: res.data.user.passport || null
+      };
 
-  localStorage.setItem(
-    "user",
-    JSON.stringify(res.data.user)
-  );
+      console.log("USER BEING SAVED:", loggedInUser);
 
-  console.log(
-    "Saved user:",
-    localStorage.getItem("user")
-  );
+      localStorage.setItem(
+        "user",
+        JSON.stringify(loggedInUser)
+      );
 
-  if (res.data.user.isAdmin === 1) {
+      console.log(
+        "USER SAVED TO LOCALSTORAGE:",
+        JSON.parse(localStorage.getItem("user"))
+      );
 
-    navigate("/admin");
+      if (Number(loggedInUser.isAdmin) === 1) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
 
-  } else {
-
-    navigate("/dashboard");
-
-  }
-
-} else {
-
-  showModal(res.data.message);
-
-}
-
-    } catch (err) {
-
-      console.log(err);
-
-      showModal("Login Failed");
-
+    } else {
+      showModal(
+        "Login Failed",
+        res.data.message || "Invalid login details"
+      );
     }
 
-  };
+  } catch (err) {
+    console.log("LOGIN ERROR:", err);
+    console.log("LOGIN ERROR RESPONSE:", err.response?.data);
 
+    showModal(
+      "Login Failed",
+      err.response?.data?.message || "Login Failed"
+    );
+  }
+};
   return (
 <>
     <div className="auth-container">
